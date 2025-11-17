@@ -17,6 +17,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.tasks.OnFailureListener
 import android.provider.Settings
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -77,6 +78,23 @@ class MainActivity : ComponentActivity() {
                     ) {
                         LocationComposable()
                     }
+                    Row(
+                        Modifier
+                            .weight(2f)
+                            .align(Alignment.CenterHorizontally)
+                            .padding(16.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            LocationComposable()
+
+                            Button(
+                                onClick = { getCurrentLocation() },
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Text(text = "Get current location")
+                            }
+                        }
+                    }
                     // TODO 2: Add a button to call getCurrentLocation for retrieving current location
                 }
 
@@ -136,12 +154,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun getCurrentLocation() {
+
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
         if (isLocationPermissionGranted) {
             if (ActivityCompat.checkSelfPermission(
                     this,
                     Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                ) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(
                     this,
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) != PackageManager.PERMISSION_GRANTED
@@ -149,8 +170,32 @@ class MainActivity : ComponentActivity() {
                 return
             }
             // TODO 3 Add a fusedLocationClient function to retrieve the current location and set the marker to point to that location
+            val cancellationTokenSource = CancellationTokenSource()
+
+            fusedLocationClient
+                .getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    cancellationTokenSource.token
+                )
+                .addOnSuccessListener { location: Location? ->
+                    location?.let {
+                        latLngState.value = LatLng(it.latitude, it.longitude)
+                    }
+                }
+                .addOnFailureListener { e ->
+                    e.printStackTrace()
+                }
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_ID
+            )
         }
     }
+
+
+
 
     @Composable
     private fun LocationComposable() {
